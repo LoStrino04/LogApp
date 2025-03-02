@@ -15,6 +15,7 @@ private:
     wxGrid* dataTable;
     wxMenuBar* menuBar;
     wxMenu* file_menu;
+    wxMenuItem* open_file;
     wxMenu* options_menu;
     wxMenu* help_menu;
     wxMenuItem* quit;
@@ -36,6 +37,7 @@ private:
     void OnNextData(wxCommandEvent& event);
     void OnPreviousData(wxCommandEvent& event);
     void UpdateDataTable(vector<Log>& logs);
+    void OnOpen(wxCommandEvent& event);
 };
 
 AppFrame::AppFrame(const wxString& titolo, const wxPoint& pos, const wxSize& size) : wxFrame(NULL, wxID_ANY, titolo, pos, size) {
@@ -45,12 +47,15 @@ AppFrame::AppFrame(const wxString& titolo, const wxPoint& pos, const wxSize& siz
     //creazione barra dei menu
     menuBar = new wxMenuBar();
     file_menu = new wxMenu();
+    open_file = new wxMenuItem(file_menu, 0, "Open");
     options_menu = new wxMenu();
     help_menu = new wxMenu();
 
     menuBar->Append(file_menu, "File");
     menuBar->Append(options_menu, "Options");
     menuBar->Append(help_menu, "Help");
+    file_menu->Append(open_file);
+    file_menu->Bind(wxEVT_MENU, &AppFrame::OnOpen, this, open_file->GetId());
 
     // Creazione della listbox con 3 opzioni
     wxString channels[] = { "Channel 0", "Channel 1" };
@@ -124,12 +129,15 @@ AppFrame::AppFrame(const wxString& titolo, const wxPoint& pos, const wxSize& siz
     // Aggiungi il grafico al layout principale
     mainSizer->Add(list_plotSizer, 1, wxEXPAND);
    
-
     // Imposta il layout del pannello
     panel->SetSizer(mainSizer);
 
     SetMenuBar(menuBar);
+    CreateStatusBar(4);
+    Centre();
+}
 
+void AppFrame::OnOpen(wxCommandEvent& event) {
     // Legge i dati
     read_data_from_txt(logs_from_blf);
 
@@ -140,9 +148,6 @@ AppFrame::AppFrame(const wxString& titolo, const wxPoint& pos, const wxSize& siz
 
     log_channels.push_back(id_channel_zero);
     log_channels.push_back(id_channel_one);
-
-    CreateStatusBar(4);
-    Centre();
 }
 
 void AppFrame::CreatePlot(int channel, int index) {
@@ -175,6 +180,7 @@ void AppFrame::CreatePlot(int channel, int index) {
 
 }
 
+// 
 void AppFrame::UpdateDataTable(vector<Log>& logs) {
     dataTable->ClearGrid();
     
@@ -208,7 +214,7 @@ void AppFrame::UpdateDataTable(vector<Log>& logs) {
 
 void AppFrame::OnChannelListSelect(wxCommandEvent& event) {
     int tmp_channel = ChannelList->GetSelection();
-    if (tmp_channel != wxNOT_FOUND) {
+    if (tmp_channel != wxNOT_FOUND && !logs_from_blf.empty()) {
         selected_channel = tmp_channel;
         selected_id = 0;
 
