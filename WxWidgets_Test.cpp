@@ -16,6 +16,7 @@ private:
     wxMenuBar* menuBar;
     wxMenu* file_menu;
     wxMenuItem* open_file;
+    wxMenuItem* export_csv;
     wxMenu* options_menu;
     wxMenu* help_menu;
     wxMenuItem* quit;
@@ -31,13 +32,14 @@ private:
     int selected_id = 0;
     int num_table_cols = 4;
 
-    void CreatePlot(int channel,int index);
+    void CreatePlot(int channel, int index);
     void OnChannelListSelect(wxCommandEvent& event);
     void OnIdListSelect(wxCommandEvent& event);
     void OnNextData(wxCommandEvent& event);
     void OnPreviousData(wxCommandEvent& event);
     void UpdateDataTable(vector<Log>& logs);
     void OnOpen(wxCommandEvent& event);
+    void OnExport(wxCommandEvent& event);
 };
 
 AppFrame::AppFrame(const wxString& titolo, const wxPoint& pos, const wxSize& size) : wxFrame(NULL, wxID_ANY, titolo, pos, size) {
@@ -47,22 +49,26 @@ AppFrame::AppFrame(const wxString& titolo, const wxPoint& pos, const wxSize& siz
     //creazione barra dei menu
     menuBar = new wxMenuBar();
     file_menu = new wxMenu();
-    open_file = new wxMenuItem(file_menu, 0, "Open");
+    open_file = new wxMenuItem(file_menu, 0, "Open BLF");
+    export_csv = new wxMenuItem(file_menu, 1, "Export CSV");
     options_menu = new wxMenu();
     help_menu = new wxMenu();
 
     menuBar->Append(file_menu, "File");
-    menuBar->Append(options_menu, "Options");
+    menuBar->Append(options_menu, "View");
     menuBar->Append(help_menu, "Help");
     file_menu->Append(open_file);
+    file_menu->Append(export_csv);
     file_menu->Bind(wxEVT_MENU, &AppFrame::OnOpen, this, open_file->GetId());
+    file_menu->Bind(wxEVT_MENU, &AppFrame::OnExport, this, export_csv->GetId());
+    
 
     // Creazione della listbox con 3 opzioni
     wxString channels[] = { "Channel 0", "Channel 1" };
     ChannelList = new wxListBox(panel, wxID_ANY, wxDefaultPosition, wxSize(150, -1), 2, channels, wxLB_SINGLE);
     ChannelList->Bind(wxEVT_LISTBOX, &AppFrame::OnChannelListSelect, this);
 
-    wxString default_ids[] = {""};
+    wxString default_ids[] = { "" };
     IdList = new wxListBox(panel, wxID_ANY, wxDefaultPosition, wxSize(150, -1), 1, default_ids, wxLB_SINGLE);
     IdList->Bind(wxEVT_LISTBOX, &AppFrame::OnIdListSelect, this);
 
@@ -81,7 +87,7 @@ AppFrame::AppFrame(const wxString& titolo, const wxPoint& pos, const wxSize& siz
     id_text->SetFont(tmp_font);
 
     //Impostazione tabella per i dati dei messaggi di log
-    dataTable = new wxGrid(panel, wxID_ANY, wxDefaultPosition, wxSize(990,-1), wxSUNKEN_BORDER);
+    dataTable = new wxGrid(panel, wxID_ANY, wxDefaultPosition, wxSize(990, -1), wxSUNKEN_BORDER);
     dataTable->CreateGrid(0, num_table_cols);
 
     wxString cols_titles[] = { "TimeStamp", "ID", "Data", "Channel" };
@@ -119,16 +125,16 @@ AppFrame::AppFrame(const wxString& titolo, const wxPoint& pos, const wxSize& siz
 
     // Layout per grafico, pulsanti e tabella
     wxBoxSizer* button_plot_tableSizer = new wxBoxSizer(wxVERTICAL);
-    button_plot_tableSizer->Add(plot, 10 , wxEXPAND | wxALL, 0);
+    button_plot_tableSizer->Add(plot, 12, wxEXPAND | wxALL, 0);
     button_plot_tableSizer->Add(buttonSizer, 1, wxEXPAND | wxALL, 0);
-    button_plot_tableSizer->Add(dataTable, 4, wxEXPAND | wxALL, 0);
+    button_plot_tableSizer->Add(dataTable, 3, wxEXPAND | wxALL, 0);
     wxBoxSizer* list_plotSizer = new wxBoxSizer(wxHORIZONTAL);
     list_plotSizer->Add(listSizer, 0, wxEXPAND | wxALL, 10);
     list_plotSizer->Add(button_plot_tableSizer, 1, wxEXPAND | wxALL, 10);
 
     // Aggiungi il grafico al layout principale
     mainSizer->Add(list_plotSizer, 1, wxEXPAND);
-   
+
     // Imposta il layout del pannello
     panel->SetSizer(mainSizer);
 
@@ -148,6 +154,10 @@ void AppFrame::OnOpen(wxCommandEvent& event) {
 
     log_channels.push_back(id_channel_zero);
     log_channels.push_back(id_channel_one);
+}
+
+void AppFrame::OnExport(wxCommandEvent& event) {
+    write_csv_file(log_channels[selected_channel][selected_id]);
 }
 
 void AppFrame::CreatePlot(int channel, int index) {
@@ -183,7 +193,7 @@ void AppFrame::CreatePlot(int channel, int index) {
 // 
 void AppFrame::UpdateDataTable(vector<Log>& logs) {
     dataTable->ClearGrid();
-    
+
     if (dataTable->GetNumberRows() > 0)
         dataTable->DeleteRows(0, dataTable->GetNumberRows());
 
@@ -193,18 +203,18 @@ void AppFrame::UpdateDataTable(vector<Log>& logs) {
         for (int j = 0; j < num_table_cols; j++) {
             wxString tmp_cell_text;
             switch (j) {
-                case 0:
-                    tmp_cell_text << logs[i].get_timestamp();
-                    break;
-                case 1:
-                    tmp_cell_text << logs[i].get_data();
-                    break;
-                case 2:
-                    tmp_cell_text << logs[i].get_id();
-                    break;
-                case 3:
-                    tmp_cell_text << logs[i].get_channel();
-                    break;
+            case 0:
+                tmp_cell_text << logs[i].get_timestamp();
+                break;
+            case 1:
+                tmp_cell_text << logs[i].get_data();
+                break;
+            case 2:
+                tmp_cell_text << logs[i].get_id();
+                break;
+            case 3:
+                tmp_cell_text << logs[i].get_channel();
+                break;
             }
             dataTable->SetCellValue(i, j, tmp_cell_text);
             tmp_cell_text.Clear();
@@ -221,14 +231,14 @@ void AppFrame::OnChannelListSelect(wxCommandEvent& event) {
         visual_limit = BASE_VISUAL_LIMIT;
 
         UpdateDataTable(log_channels[selected_channel][selected_id]);
-        CreatePlot(selected_channel,selected_id);  
+        CreatePlot(selected_channel, selected_id);
 
         IdList->Clear();
 
         vector<vector<Log>> tmp_id_vector = log_channels[selected_channel];
-        
+
         // Aggiorno la listbox degli id con quelli del channel selezionato
-        for (int i = 0; i < tmp_id_vector.size()  ; i++) {
+        for (int i = 0; i < tmp_id_vector.size(); i++) {
             wxString tmp_id;
             tmp_id << tmp_id_vector[i][0].get_id();
             IdList->AppendString(tmp_id);
@@ -249,7 +259,9 @@ void AppFrame::OnIdListSelect(wxCommandEvent& event) {
 }
 
 void AppFrame::OnNextData(wxCommandEvent& event) {
-    if (visual_limit  > log_channels[selected_channel][selected_id].size())
+    if (logs_from_blf.empty())
+        return;
+    if (visual_limit > log_channels[selected_channel][selected_id].size())
         return;
 
     visual_limit += BASE_VISUAL_LIMIT;
@@ -257,6 +269,8 @@ void AppFrame::OnNextData(wxCommandEvent& event) {
 }
 
 void AppFrame::OnPreviousData(wxCommandEvent& event) {
+    if (logs_from_blf.empty())
+        return;
     if (visual_limit <= BASE_VISUAL_LIMIT)
         return;
 
