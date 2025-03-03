@@ -30,10 +30,16 @@ public:
 	int get_channel() const { return channel; }
 };
 
+string log_to_string(Log in_log_msg) {
+	string out_string = "";
+
+	return out_string + to_string(in_log_msg.get_timestamp()) + ", " + to_string(in_log_msg.get_id()) + ", " + to_string(in_log_msg.get_data()) + ", " + to_string(in_log_msg.get_channel());
+}
+
 
 //funzione per eseguire script python per leggere i dati da file blf
 void run_python_file(string& file_name) {
-	string command = "py ";
+	string command = "python ";
 
 	command += file_name;
 	system(command.c_str());
@@ -124,18 +130,27 @@ void list_foreach_id(vector<Log>& log_list, vector<vector<Log>>& list_for_id, in
 
 //estraggo da un vettore di log i timestamp e i data, visual limit imposta il numero di dati estratti
 void extract_time_data(vector<Log> in_logs, vector<double>& in_time, vector<double>& in_data, int visual_limit) {
-	
+
 	for (int i = visual_limit - BASE_VISUAL_LIMIT; i < in_logs.size(); i++) {
 
-		if (i > visual_limit) 
+		if (i > visual_limit)
 			break;
-		
+
 		Log tmp_log = in_logs[i];
-		
+
 		in_time.push_back(tmp_log.get_timestamp());
 		in_data.push_back(tmp_log.get_data());
 
 	}
-
 	return;
+}
+
+void write_csv_file(vector<Log> to_export_logs) {
+	ofstream export_csv_file("csv_log_export.txt");
+	
+	for (int i = 0; i < to_export_logs.size(); i++) {
+		export_csv_file << log_to_string(to_export_logs[i]) << endl;
+	}
+
+	export_csv_file.close();
 }
