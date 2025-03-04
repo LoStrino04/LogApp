@@ -9,10 +9,11 @@ public:
     AppFrame(const wxString& titolo, const wxPoint& pos, const wxSize& size);
 
 private:
-    mpWindow* plot;
+    mpWindow* first_plot;
+    mpWindow* second_plot;
     wxListBox* ChannelList;
     wxListBox* IdList;
-    wxGrid* dataTable;
+    //wxGrid* dataTable;
     wxMenuBar* menuBar;
     wxMenu* file_menu;
     wxMenuItem* open_file;
@@ -20,13 +21,15 @@ private:
     wxMenu* options_menu;
     wxMenu* help_menu;
     wxMenuItem* quit;
-    wxButton* nextDataButton;
-    wxButton* previousDataButton;
+    wxButton* first_nextDataButton;
+    wxButton* first_previousDataButton;
+    wxButton* second_nextDataButton;
+    wxButton* second_previousDataButton;
     wxStaticText* ch_text;
     wxStaticText* id_text;
     vector<Log> logs_from_blf;
     vector<vector<vector<Log>>> log_channels;
-
+    
     int visual_limit = BASE_VISUAL_LIMIT;
     int selected_channel = 0;
     int selected_id = 0;
@@ -35,9 +38,9 @@ private:
     void CreatePlot(int channel, int index);
     void OnChannelListSelect(wxCommandEvent& event);
     void OnIdListSelect(wxCommandEvent& event);
-    void OnNextData(wxCommandEvent& event);
-    void OnPreviousData(wxCommandEvent& event);
-    void UpdateDataTable(vector<Log>& logs);
+    void OnSecondNextData(wxCommandEvent& event);
+    void OnSecondPreviousData(wxCommandEvent& event);
+    //void UpdateDataTable(vector<Log>& logs);
     void OnOpen(wxCommandEvent& event);
     void OnExport(wxCommandEvent& event);
 };
@@ -73,10 +76,14 @@ AppFrame::AppFrame(const wxString& titolo, const wxPoint& pos, const wxSize& siz
     IdList->Bind(wxEVT_LISTBOX, &AppFrame::OnIdListSelect, this);
 
     //impostazione dei pulsanti per spostarsi nel grafico
-    nextDataButton = new wxButton(panel, wxID_ANY, " > ", wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, "nextDataButton");
-    nextDataButton->Bind(wxEVT_BUTTON, &AppFrame::OnNextData, this);
-    previousDataButton = new wxButton(panel, wxID_ANY, " < ", wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, "previousDataButton");
-    previousDataButton->Bind(wxEVT_BUTTON, &AppFrame::OnPreviousData, this);
+    first_nextDataButton = new wxButton(panel, wxID_ANY, " > ", wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, "nextDataButton");
+    first_nextDataButton->Bind(wxEVT_BUTTON, &AppFrame::OnSecondNextData, this);
+    first_previousDataButton = new wxButton(panel, wxID_ANY, " < ", wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, "previousDataButton");
+    first_previousDataButton->Bind(wxEVT_BUTTON, &AppFrame::OnSecondPreviousData, this);    
+    second_nextDataButton = new wxButton(panel, wxID_ANY, " > ", wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, "nextDataButton");
+    second_nextDataButton->Bind(wxEVT_BUTTON, &AppFrame::OnSecondNextData, this);
+    second_previousDataButton = new wxButton(panel, wxID_ANY, " < ", wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, "previousDataButton");
+    second_previousDataButton->Bind(wxEVT_BUTTON, &AppFrame::OnSecondPreviousData, this);
 
     //Impostazione testi id e channel
     ch_text = new wxStaticText(panel, wxID_ANY, "Channels", wxDefaultPosition, wxDefaultSize, 0, "ch_text");
@@ -86,6 +93,7 @@ AppFrame::AppFrame(const wxString& titolo, const wxPoint& pos, const wxSize& siz
     ch_text->SetFont(tmp_font);
     id_text->SetFont(tmp_font);
 
+    /*
     //Impostazione tabella per i dati dei messaggi di log
     dataTable = new wxGrid(panel, wxID_ANY, wxDefaultPosition, wxSize(990, -1), wxSUNKEN_BORDER);
     dataTable->CreateGrid(0, num_table_cols);
@@ -99,13 +107,14 @@ AppFrame::AppFrame(const wxString& titolo, const wxPoint& pos, const wxSize& siz
         dataTable->SetColSize(index_col, colWidth);
         dataTable->SetColLabelValue(index_col, cols_titles[index_col]);
     }
-
+    
     dataTable->DisableDragColSize();
     dataTable->DisableDragRowSize();
     dataTable->DisableCellEditControl();
-
+    */
     // Creazione del grafico
-    plot = new mpWindow(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSUNKEN_BORDER);
+    first_plot = new mpWindow(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSUNKEN_BORDER);
+    second_plot = new mpWindow(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSUNKEN_BORDER);
 
 
     // Layout principale
@@ -119,18 +128,22 @@ AppFrame::AppFrame(const wxString& titolo, const wxPoint& pos, const wxSize& siz
     listSizer->Add(IdList, 5, wxEXPAND | wxALL);
 
     // Layout pulsanti
-    wxBoxSizer* buttonSizer = new wxBoxSizer(wxHORIZONTAL);
-    buttonSizer->Add(previousDataButton, 1, wxEXPAND | wxALL, 0);
-    buttonSizer->Add(nextDataButton, 1, wxEXPAND | wxALL, 0);
+    wxBoxSizer* first_buttonSizer = new wxBoxSizer(wxHORIZONTAL);
+    first_buttonSizer->Add(first_previousDataButton, 1, wxEXPAND | wxALL, 0);
+    first_buttonSizer->Add(first_nextDataButton, 1, wxEXPAND | wxALL, 0);    
+    wxBoxSizer* second_buttonSizer = new wxBoxSizer(wxHORIZONTAL);
+    second_buttonSizer->Add(second_previousDataButton, 1, wxEXPAND | wxALL, 0);
+    second_buttonSizer->Add(second_nextDataButton, 1, wxEXPAND | wxALL, 0);
 
     // Layout per grafico, pulsanti e tabella
-    wxBoxSizer* button_plot_tableSizer = new wxBoxSizer(wxVERTICAL);
-    button_plot_tableSizer->Add(plot, 12, wxEXPAND | wxALL, 0);
-    button_plot_tableSizer->Add(buttonSizer, 1, wxEXPAND | wxALL, 0);
-    button_plot_tableSizer->Add(dataTable, 3, wxEXPAND | wxALL, 0);
+    wxBoxSizer* button_plotSizer = new wxBoxSizer(wxVERTICAL);
+    button_plotSizer->Add(first_plot, 12, wxEXPAND | wxALL, 0);
+    button_plotSizer->Add(first_buttonSizer, 1, wxEXPAND | wxALL, 0);
+    button_plotSizer->Add(second_plot, 12, wxEXPAND | wxALL, 0);
+    button_plotSizer->Add(second_buttonSizer, 1, wxEXPAND | wxALL, 0);
     wxBoxSizer* list_plotSizer = new wxBoxSizer(wxHORIZONTAL);
     list_plotSizer->Add(listSizer, 0, wxEXPAND | wxALL, 10);
-    list_plotSizer->Add(button_plot_tableSizer, 1, wxEXPAND | wxALL, 10);
+    list_plotSizer->Add(button_plotSizer, 1, wxEXPAND | wxALL, 10);
 
     // Aggiungi il grafico al layout principale
     mainSizer->Add(list_plotSizer, 1, wxEXPAND);
@@ -158,10 +171,11 @@ void AppFrame::OnOpen(wxCommandEvent& event) {
 
 void AppFrame::OnExport(wxCommandEvent& event) {
     write_csv_file(log_channels[selected_channel][selected_id]);
+    
 }
 
 void AppFrame::CreatePlot(int channel, int index) {
-    plot->DelAllLayers(true); // Pulisce il grafico
+    first_plot->DelAllLayers(true); // Pulisce il grafico
 
     vector<double> data;
     vector<double> time_stmp;
@@ -178,19 +192,19 @@ void AppFrame::CreatePlot(int channel, int index) {
     mpScaleX* xaxis = new mpScaleX("Time", mpALIGN_BORDER_BOTTOM, true);
     mpScaleY* yaxis = new mpScaleY("Data", mpALIGN_BORDER_LEFT, true);
 
-    plot->SetMargins(20, 20, 20, 20);
+    first_plot->SetMargins(20, 20, 20, 20);
 
-    plot->AddLayer(xaxis);
-    plot->AddLayer(yaxis);
-    plot->AddLayer(data_layer);
+    first_plot->AddLayer(xaxis);
+    first_plot->AddLayer(yaxis);
+    first_plot->AddLayer(data_layer);
 
-    plot->EnableMousePanZoom(false);
-    plot->Fit();
-    plot->Refresh();
+    first_plot->EnableMousePanZoom(false);
+    first_plot->Fit();
+    first_plot->Refresh();
 
 }
 
-// 
+/****************************************************
 void AppFrame::UpdateDataTable(vector<Log>& logs) {
     dataTable->ClearGrid();
 
@@ -221,6 +235,7 @@ void AppFrame::UpdateDataTable(vector<Log>& logs) {
         }
     }
 }
+******************************************************************/
 
 void AppFrame::OnChannelListSelect(wxCommandEvent& event) {
     int tmp_channel = ChannelList->GetSelection();
@@ -230,7 +245,7 @@ void AppFrame::OnChannelListSelect(wxCommandEvent& event) {
 
         visual_limit = BASE_VISUAL_LIMIT;
 
-        UpdateDataTable(log_channels[selected_channel][selected_id]);
+        //UpdateDataTable(log_channels[selected_channel][selected_id]);
         CreatePlot(selected_channel, selected_id);
 
         IdList->Clear();
@@ -253,12 +268,12 @@ void AppFrame::OnIdListSelect(wxCommandEvent& event) {
 
         visual_limit = BASE_VISUAL_LIMIT;
 
-        UpdateDataTable(log_channels[selected_channel][selected_id]);
+        //UpdateDataTable(log_channels[selected_channel][selected_id]);
         CreatePlot(selected_channel, selected_id);
     }
 }
 
-void AppFrame::OnNextData(wxCommandEvent& event) {
+void AppFrame::OnSecondNextData(wxCommandEvent& event) {
     if (logs_from_blf.empty())
         return;
     if (visual_limit > log_channels[selected_channel][selected_id].size())
@@ -268,7 +283,7 @@ void AppFrame::OnNextData(wxCommandEvent& event) {
     CreatePlot(selected_channel, selected_id);
 }
 
-void AppFrame::OnPreviousData(wxCommandEvent& event) {
+void AppFrame::OnSecondPreviousData(wxCommandEvent& event) {
     if (logs_from_blf.empty())
         return;
     if (visual_limit <= BASE_VISUAL_LIMIT)
