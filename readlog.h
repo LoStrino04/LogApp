@@ -5,6 +5,7 @@
 #include <cmath>
 #include <vector>
 #include <list>
+#include <string>
 
 #define BASE_VISUAL_LIMIT 300		//lmite di dati visualizzabili in una volta nel grafico
 
@@ -12,25 +13,26 @@ using namespace std;
 
 //classe Log che contiene i dati di ogni messaggio del file blf
 class Log {
-	private:
-		double timestamp;
-		double data;
-		int id;
-		int channel;
-		string name;
-	public:
-		Log(double in_time, double in_data, int in_id, int in_channel, string in_name) {
-			timestamp = in_time;
-			data = in_data;
-			id = in_id;
-			channel = in_channel;
-			name = in_name;
-		}
-		double get_timestamp() const { return timestamp; }
-		double get_data() const { return data; }
-		int get_id() const { return id; }
-		int get_channel() const { return channel; }
-		string get_name() const { return name; }
+private:
+	double timestamp;
+	double data;
+	int id;
+	int channel;
+	string name;
+public:
+	Log(double in_time, double in_data, int in_id, int in_channel, string in_name) {
+		timestamp = in_time;
+		data = in_data;
+		id = in_id;
+		channel = in_channel;
+		name = in_name;
+	}
+	double get_timestamp() const { return timestamp; }
+	double get_data() const { return data; }
+	int get_id() const { return id; }
+	int get_channel() const { return channel; }
+	string get_name() const { return name; }
+	void set_name(string in_name) { name = in_name; }
 };
 
 string log_to_string(Log in_log_msg) {
@@ -39,17 +41,29 @@ string log_to_string(Log in_log_msg) {
 	return out_string + to_string(in_log_msg.get_timestamp()) + ", " + to_string(in_log_msg.get_id()) + ", " + to_string(in_log_msg.get_data()) + ", " + to_string(in_log_msg.get_channel());
 }
 
-
 //funzione per eseguire script python per leggere i dati da file blf
 void run_python_file(string& file_name) {
-	string command = "py ";
+	string command = "python ";
 
 	command += file_name;
 	system(command.c_str());
 }
 
+string getFileName(const string filePath) {
+	size_t lastSlash = filePath.find_last_of("\\/"); // Trova l'ultimo separatore
+	if (lastSlash != std::string::npos) {
+		return filePath.substr(lastSlash + 1); // Estrae il nome del file
+	}
+	return filePath; // Se non ci sono separatori, restituisce l'intera stringa
+}
+
+void assign_log_name(Log& in_log, int id, string name) {
+	if (in_log.get_id() == id)
+		in_log.set_name(name);
+}
+
 //legge i dati di ogni messaggio contenuto nel file txt in formato csv e li memorizza in un vettore di oggetti Log
-void read_data_from_txt(vector<Log>& L_log) 
+void read_data_from_txt(vector<Log>& L_log)
 {
 
 	string filename = "read_blf.py";
@@ -59,11 +73,11 @@ void read_data_from_txt(vector<Log>& L_log)
 	ifstream log_file("log_datas.txt");
 	if (log_file.is_open()) {
 		string str_timestamp, str_datas, str_id, str_channel, str_name;
-		while (getline(log_file, str_name, ',')) {
-			getline(log_file, str_timestamp, ',');
+		while (getline(log_file, str_timestamp, ',')) {
 			getline(log_file, str_datas, ',');
 			getline(log_file, str_id, ',');
-			getline(log_file, str_channel);
+			getline(log_file, str_channel, ',');
+			getline(log_file, str_name);
 
 			istringstream tk_tm(str_timestamp);
 			double tmp_timestamp;
@@ -135,18 +149,16 @@ void list_foreach_id(vector<Log>& log_list, vector<vector<Log>>& list_for_id, in
 //estraggo da un vettore di log i timestamp e i data, visual limit imposta il numero di dati estratti
 void extract_time_data(vector<Log> in_logs, vector<double>& in_time, vector<double>& in_data, int visual_limit) {
 	
-	for (int i = visual_limit - BASE_VISUAL_LIMIT; i < in_logs.size(); i++) {
+		for (int i = visual_limit - BASE_VISUAL_LIMIT; i < in_logs.size(); i++) {
 
-		if (i > visual_limit)
-			break;
+			if (i > visual_limit)
+				break;
 
-		Log tmp_log = in_logs[i];
+			Log tmp_log = in_logs[i];
 
-		in_time.push_back(tmp_log.get_timestamp());
-		in_data.push_back(tmp_log.get_data());
-
-	}
-	return;
+			in_time.push_back(tmp_log.get_timestamp());
+			in_data.push_back(tmp_log.get_data());
+		}
 }
 
 // Scrittura file in formato csv
@@ -166,10 +178,10 @@ void write_dbc_path(wxListBox* dbc_list) {
 
 	for (int i = 0; i < dbc_list->GetCount(); i++) {
 		wxString tmp_dbc_path = dbc_list->GetString(i);
-		
+
 		dbc_names_file << tmp_dbc_path << endl;
 	}
-	
+
 	dbc_names_file.close();
 }
 
@@ -178,8 +190,30 @@ void write_dbc_list(wxListBox* dbc_list) {
 	string str_path;
 
 	while (dbc_names_file >> str_path) {
-		dbc_list->AppendString(str_path);
+		string str_name = getFileName(str_path);
+		wxString wx_name;
+		wx_name << str_name;
+		dbc_list->AppendString(wx_name);
 	}
 
 	dbc_names_file.close();
 }
+
+void assign_name_to_id(vector<Log>& logs) {
+	ifstream id_names_file("id_names.txt");
+
+	string str_id, str_name;
+	while (getline(id_names_file, str_id, ',')) {
+		getline(id_names_file, str_name);
+
+		istringstream tk_id(str_id);
+		int tmp_id;
+		tk_id >> tmp_id;
+		for (int i = 0; i < logs.size(); i++) {
+			assign_log_name(logs[i], tmp_id, str_name);
+		}
+	}
+
+	id_names_file.close();
+}
+
