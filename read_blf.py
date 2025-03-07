@@ -23,7 +23,6 @@ class Log:
     def set_name(self, in_name):
         self._name = in_name
 
-
 def main():
     # Percorso file dbc
     #dbc_paths = []
@@ -33,40 +32,60 @@ def main():
     txt_file = "log_datas.txt"
     # Liste per memorizzare i dati
     logs = []
+    messages = []
+    dbc_paths = []
 
-    
-    #with open("dbc_names.txt") as dbc_file:
-        #for dbc_path in dbc_file:
-            #dbc_paths.append(dbc_path)
+    #"C:\\Users\\Elia\\Desktop\\Racing Team\\DBC\\BMS_DEBUG_CAN_old.dbc"
+    #"C:\\Users\\Elia\\Desktop\\Racing Team\\DBC\\VCU_TELEMETRY_CAN.dbc"
+    with open("dbc_names.txt") as dbc_file:
+        for dbc_path in dbc_file:
+            dbc_paths.append(dbc_path[:len(dbc_path) - 1])
+            print(dbc_path)
 
-    dbc_paths = ["C:\\Users\\Utente\\Desktop\\Racing Team\\DBC\\VCU_TELEMETRY_CAN.dbc",
-                 "C:\\Users\\Utente\\Desktop\\Racing Team\\DBC\\BMS_DEBUG_CAN_old.dbc"]
-    db = cantools.database.load_file(dbc_paths[0])
     # Aprire e leggere il file BLF
     with can.BLFReader(blf_file) as log:
         for msg in log:
-            tmp_name = ""        
-            try:
-                msg_id = msg.arbitration_id  # ID del messaggio
-                # Cercare il messaggio nel DBC
-                message = db.get_message_by_frame_id(msg_id)
-
-                decoded_signals = message.decode(msg.data)
-                # Iterate over signal names and values
-                for signal_name, signal_value in decoded_signals.items():
-                    tmp_name = signal_name                   
-            except:
-                pass
-
-            print(tmp_name)
-            tmp_log = Log(msg.timestamp,int.from_bytes(msg.data, byteorder='little'),msg.arbitration_id,msg.channel, tmp_name)
+            tmp_log = Log(msg.timestamp,int.from_bytes(msg.data, byteorder='little'),msg.arbitration_id,msg.channel, "")
             logs.append(tmp_log)
-                    
+
+            id_found = False     
+            for cont_msg in messages:
+                if (cont_msg[0] == msg.arbitration_id):
+                    id_found = True
+            if id_found:
+                continue
+            
+            messages.append((msg.arbitration_id, msg.data, ""))
+
+
+    with open("id_names.txt", "a") as id_names_file:
+        for db_path in dbc_paths:
+            db = cantools.database.load_file(db_path)
+            for msg_tuple in messages:
+                if msg_tuple[2] != "":
+                    continue
+                
+                tmp_name = ""
+                try:
+                    message = db.get_message_by_frame_id(msg_tuple[0])
+                    decoded_signals = message.decode(msg_tuple[1])
+                    # Iterate over signal names and values
+                    for signal_name, signal_value in decoded_signals.items():
+                        tmp_name = signal_name                   
+                except:
+                    continue
+
+                msg_tuple = msg_tuple[0],msg_tuple[1],tmp_name
+                id_names_file.write(f"{msg_tuple[0]},{tmp_name}")
+                id_names_file.write("\n")
+
+        id_names_file.close()
     
+
     # Scrivo sul txt i dati di ogni messaggio del log in formato csv 
     log_txt = open(txt_file,"a")
     for index in range(0,len(logs)):
-        log_txt.write(f"{logs[index].name()},{logs[index].timestamp()},{logs[index].data()},{logs[index].id()},{logs[index].channel()}")
+        log_txt.write(f"{logs[index].timestamp()},{logs[index].data()},{logs[index].id()},{logs[index].channel()},{logs[index].name()}")
         log_txt.write("\n")
     log_txt.close()
     
@@ -74,5 +93,6 @@ def main():
 if __name__ == "__main__":
     main()
 
-    
+
+
     
