@@ -16,8 +16,9 @@ private:
     wxListBox* DbcList;
     wxMenuBar* menuBar;
     wxMenu* file_menu;
+    wxMenuItem* export_csv_1;
     wxMenuItem* open_file;
-    wxMenuItem* export_csv;
+    wxMenuItem* export_csv_2;
     wxMenu* options_menu;
     wxMenu* help_menu;
     wxMenuItem* quit;
@@ -45,11 +46,12 @@ private:
     void OnChannelListSelect(wxCommandEvent& event);
     void OnIdListSelect(wxCommandEvent& event);
     void OnFirstNextData(wxCommandEvent& event);
-    void OnFirstPreviousData(wxCommandEvent& event);    
+    void OnFirstPreviousData(wxCommandEvent& event);
     void OnSecondNextData(wxCommandEvent& event);
     void OnSecondPreviousData(wxCommandEvent& event);
     void OnOpen(wxCommandEvent& event);
-    void OnExport(wxCommandEvent& event);
+    void OnExport1(wxCommandEvent& event);
+    void OnExport2(wxCommandEvent& event);
     void OnPlotOne(wxCommandEvent& event);
     void OnPlotTwo(wxCommandEvent& event);
     void OnInsertDBC(wxCommandEvent& event);
@@ -66,19 +68,22 @@ AppFrame::AppFrame(const wxString& titolo, const wxPoint& pos, const wxSize& siz
     options_menu = new wxMenu();
     help_menu = new wxMenu();
     open_file = new wxMenuItem(file_menu, 0, "Open BLF");
-    export_csv = new wxMenuItem(file_menu, 1, "Export CSV");
+    export_csv_1 = new wxMenuItem(file_menu, 1, "Export CSV Upper Plot");
+    export_csv_2 = new wxMenuItem(file_menu, 2, "Export CSV Lower Plot");
 
     file_menu->Append(open_file);
-    file_menu->Append(export_csv);
+    file_menu->Append(export_csv_1);
+    file_menu->Append(export_csv_2);
     file_menu->Bind(wxEVT_MENU, &AppFrame::OnOpen, this, open_file->GetId());
-    file_menu->Bind(wxEVT_MENU, &AppFrame::OnExport, this, export_csv->GetId());
+    file_menu->Bind(wxEVT_MENU, &AppFrame::OnExport1, this, export_csv_1->GetId());
+    file_menu->Bind(wxEVT_MENU, &AppFrame::OnExport2, this, export_csv_2->GetId());
     menuBar->Append(file_menu, "File");
     menuBar->Append(options_menu, "Plot");
     menuBar->Append(help_menu, "Help");
 
 
     // Creazione della listbox con 3 opzioni
-    wxString channels[] = { "Channel 0", "Channel 1" };
+    wxString channels[] = { "CAN 0", "CAN 1" };
     ChannelList = new wxListBox(panel, wxID_ANY, wxDefaultPosition, wxSize(150, -1), 2, channels, wxLB_SINGLE);
     ChannelList->Bind(wxEVT_LISTBOX, &AppFrame::OnChannelListSelect, this);
 
@@ -185,7 +190,7 @@ AppFrame::AppFrame(const wxString& titolo, const wxPoint& pos, const wxSize& siz
 void AppFrame::OnOpen(wxCommandEvent& event) {
     // Legge i dati
     read_data_from_txt(logs_from_blf);
-
+    assign_name_to_id(logs_from_blf);
     //divisione degli oggetti Log per id e per channel
     vector<vector<Log>> id_channel_zero, id_channel_one;
     list_foreach_id(logs_from_blf, id_channel_zero, 0);
@@ -193,37 +198,44 @@ void AppFrame::OnOpen(wxCommandEvent& event) {
 
     log_channels.push_back(id_channel_zero);
     log_channels.push_back(id_channel_one);
+    
 }
 
-void AppFrame::OnExport(wxCommandEvent& event) {
+void AppFrame::OnExport1(wxCommandEvent& event) {
     write_csv_file(log_channels[first_selected_channel][first_selected_id]);
+}
+
+void AppFrame::OnExport2(wxCommandEvent& event) {
+    write_csv_file(log_channels[second_selected_channel][second_selected_id]);
 }
 
 void AppFrame::OnPlotOne(wxCommandEvent& event) {
     tmp_selected_plot = 0;
     plot_one->SetBackgroundColour(*wxLIGHT_GREY);
     plot_two->SetBackgroundColour(*wxWHITE);
+}
 
-}void AppFrame::OnPlotTwo(wxCommandEvent& event) {
+void AppFrame::OnPlotTwo(wxCommandEvent& event) {
     tmp_selected_plot = 1;
     plot_one->SetBackgroundColour(*wxWHITE);
     plot_two->SetBackgroundColour(*wxLIGHT_GREY);
 }
 
 void AppFrame::CreatePlot(int channel, int index, int visual_limit, mpWindow* in_plot) {
+    
     in_plot->DelAllLayers(true); // Pulisce il grafico
 
     vector<double> data;
     vector<double> time_stmp;
 
     extract_time_data(log_channels[channel][index], time_stmp, data, visual_limit);
-    
+
 
     // Usa la serie selezionata per il grafico
     mpFXYVector* data_layer = new mpFXYVector("", mpALIGN_CENTER);
     data_layer->SetData(time_stmp, data);
     data_layer->SetContinuity(true);
-    
+
     if (in_plot == first_plot) data_layer->SetPen(wxPen(*wxRED, 2));
     else data_layer->SetPen(wxPen(*wxBLUE, 2));
 
@@ -262,7 +274,11 @@ void AppFrame::OnChannelListSelect(wxCommandEvent& event) {
         // Aggiorno la listbox degli id con quelli del channel selezionato
         for (int i = 0; i < tmp_id_vector.size(); i++) {
             wxString tmp_id;
-            tmp_id << tmp_id_vector[i][0].get_name();
+            if (tmp_id_vector[i][0].get_name() == "")
+                tmp_id << "ID: " << tmp_id_vector[i][0].get_id();
+            else
+                tmp_id << tmp_id_vector[i][0].get_name();
+
             IdList->AppendString(tmp_id);
         }
     }
@@ -330,13 +346,22 @@ void AppFrame::OnInsertDBC(wxCommandEvent& event) {
 
     for (int i = 0; i < DbcList->GetCount(); i++) {
         wxString tmp_str = DbcList->GetString(i);
-        
+
         if (tmp_str == dbc_path)
             return;
     }
-   
+
+
     DbcList->AppendString(dbc_path);
     write_dbc_path(DbcList);
+
+    wxString wx_dbc_name;
+    wx_dbc_name << getFileName(string(dbc_path));
+
+    DbcList->Delete(DbcList->GetCount() - 1);
+    DbcList->AppendString(wx_dbc_name);
+
+    text_dbc->Clear();
 }
 
 void AppFrame::OnDeleteDBC(wxCommandEvent& event) {
