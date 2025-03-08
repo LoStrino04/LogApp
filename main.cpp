@@ -30,7 +30,9 @@ private:
     wxButton* plot_two;
     wxButton* insert_dbc;
     wxButton* delete_dbc;
+    wxButton* load_log;
     wxTextCtrl* text_dbc;
+    wxTextCtrl* text_log;
     wxStaticText* ch_text;
     wxStaticText* id_text;
     wxStaticText* dbc_text;
@@ -117,9 +119,13 @@ AppFrame::AppFrame(const wxString& titolo, const wxPoint& pos, const wxSize& siz
     insert_dbc->Bind(wxEVT_BUTTON, &AppFrame::OnInsertDBC, this);
     delete_dbc = new wxButton(panel, wxID_ANY, "Delete DBC", wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, "delete_dbc");
     delete_dbc->Bind(wxEVT_BUTTON, &AppFrame::OnDeleteDBC, this);
-
     text_dbc = new wxTextCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, "text_dbc");
-    text_dbc->SetHint("Write DBC Path Here");
+    text_dbc->SetHint("Insert DBC Path Here");
+
+    load_log = new wxButton(panel, wxID_ANY, "Load LOG", wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, "load_log");
+    load_log->Bind(wxEVT_BUTTON, &AppFrame::OnOpen, this);
+    text_log = new wxTextCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, "text_log");
+    text_log->SetHint("Insert File BLF Path Here");
 
     //Impostazione testi id e channel
     ch_text = new wxStaticText(panel, wxID_ANY, "Channels", wxDefaultPosition, wxDefaultSize, 0, "ch_text");
@@ -162,18 +168,22 @@ AppFrame::AppFrame(const wxString& titolo, const wxPoint& pos, const wxSize& siz
     wxBoxSizer* dbc_sizer = new wxBoxSizer(wxHORIZONTAL);
     dbc_sizer->Add(insert_dbc, 1, wxEXPAND | wxALL, 0);
     dbc_sizer->Add(text_dbc, 5, wxEXPAND | wxALL, 0);
+    wxBoxSizer* log_sizer = new wxBoxSizer(wxHORIZONTAL);
+    log_sizer->Add(load_log, 1, wxEXPAND | wxALL, 0);
+    log_sizer->Add(text_log, 5, wxEXPAND | wxALL, 0);
 
     // Layout per grafici e pulsanti
     wxBoxSizer* button_plotSizer = new wxBoxSizer(wxVERTICAL);
-    button_plotSizer->Add(dbc_sizer, 1, wxEXPAND | wxALL, 0);
+    button_plotSizer->Add(log_sizer, 0, wxEXPAND | wxALL, 0);
+    button_plotSizer->Add(dbc_sizer, 0, wxEXPAND | wxALL, 0);
     button_plotSizer->Add(selection_buttonSizer, 1, wxEXPAND | wxALL, 0);
     button_plotSizer->Add(first_plot, 12, wxEXPAND | wxALL, 0);
     button_plotSizer->Add(first_buttonSizer, 1, wxEXPAND | wxALL, 0);
     button_plotSizer->Add(second_plot, 12, wxEXPAND | wxALL, 0);
     button_plotSizer->Add(second_buttonSizer, 1, wxEXPAND | wxALL, 0);
     wxBoxSizer* list_plotSizer = new wxBoxSizer(wxHORIZONTAL);
-    list_plotSizer->Add(listSizer, 0, wxEXPAND | wxALL, 10);
-    list_plotSizer->Add(button_plotSizer, 1, wxEXPAND | wxALL, 10);
+    list_plotSizer->Add(listSizer, 1, wxEXPAND | wxALL, 10);
+    list_plotSizer->Add(button_plotSizer, 5, wxEXPAND | wxALL, 10);
 
     // Aggiunta layout pagina al layout principale
     mainSizer->Add(list_plotSizer, 1, wxEXPAND);
@@ -198,7 +208,6 @@ void AppFrame::OnOpen(wxCommandEvent& event) {
 
     log_channels.push_back(id_channel_zero);
     log_channels.push_back(id_channel_one);
-    
 }
 
 void AppFrame::OnExport1(wxCommandEvent& event) {
@@ -222,7 +231,7 @@ void AppFrame::OnPlotTwo(wxCommandEvent& event) {
 }
 
 void AppFrame::CreatePlot(int channel, int index, int visual_limit, mpWindow* in_plot) {
-    
+
     in_plot->DelAllLayers(true); // Pulisce il grafico
 
     vector<double> data;
@@ -353,7 +362,7 @@ void AppFrame::OnInsertDBC(wxCommandEvent& event) {
 
 
     DbcList->AppendString(dbc_path);
-    write_dbc_path(DbcList);
+    write_dbc_path(text_dbc);
 
     wxString wx_dbc_name;
     wx_dbc_name << getFileName(string(dbc_path));
@@ -365,11 +374,12 @@ void AppFrame::OnInsertDBC(wxCommandEvent& event) {
 }
 
 void AppFrame::OnDeleteDBC(wxCommandEvent& event) {
-    int tmp_dbc = DbcList->GetSelection();
+    int tmp_dbc_ind = DbcList->GetSelection();
 
-    if (tmp_dbc != wxNOT_FOUND) {
-        DbcList->Delete(tmp_dbc);
-        write_dbc_path(DbcList);
+    if (tmp_dbc_ind != wxNOT_FOUND) {
+        wxString tmp_dbc_name = DbcList->GetString(tmp_dbc_ind);
+        delete_dbc_path(tmp_dbc_name);
+        DbcList->Delete(tmp_dbc_ind);
     }
 }
 
