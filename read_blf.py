@@ -35,13 +35,16 @@ def main():
     messages = []
     dbc_paths = []
 
+    #C:\\Users\\Utente\\Desktop\\Racing Team\\DBC\\VCU_TELEMETRY_CAN.dbc
+    #C:\\Users\\Utente\\Desktop\\Racing Team\\DBC\\BMS_DEBUG_CAN_old.dbc
     #"C:\\Users\\Elia\\Desktop\\Racing Team\\DBC\\BMS_DEBUG_CAN_old.dbc"
     #"C:\\Users\\Elia\\Desktop\\Racing Team\\DBC\\VCU_TELEMETRY_CAN.dbc"
+    
     with open("dbc_names.txt") as dbc_file:
         for dbc_path in dbc_file:
             dbc_paths.append(dbc_path[:len(dbc_path) - 1])
             print(dbc_path)
-
+    
     # Aprire e leggere il file BLF
     with can.BLFReader(blf_file) as log:
         for msg in log:
@@ -76,6 +79,7 @@ def main():
                     continue
 
                 msg_tuple = msg_tuple[0],msg_tuple[1],tmp_name
+                print(tmp_name)
                 id_names_file.write(f"{msg_tuple[0]},{tmp_name}")
                 id_names_file.write("\n")
 
@@ -92,7 +96,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-    
