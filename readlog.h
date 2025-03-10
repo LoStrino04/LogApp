@@ -12,7 +12,7 @@
 using namespace std;
 
 //classe Log che contiene i dati di ogni messaggio del file blf
-class Log {
+class LogMsg {
 private:
 	double timestamp;
 	double data;
@@ -20,7 +20,7 @@ private:
 	int channel;
 	string name;
 public:
-	Log(double in_time, double in_data, int in_id, int in_channel, string in_name) {
+	LogMsg(double in_time, double in_data, int in_id, int in_channel, string in_name) {
 		timestamp = in_time;
 		data = in_data;
 		id = in_id;
@@ -35,7 +35,23 @@ public:
 	void set_name(string in_name) { name = in_name; }
 };
 
-string log_to_string(Log in_log_msg) {
+class LogSignal {
+	private:
+		vector<LogMsg> log_messages;
+		string signal_name;
+	public:
+		LogSignal(string in_name, vector<LogMsg> in_logs) {
+			log_messages = in_logs;
+			signal_name = in_name;
+		}
+		vector<LogMsg> get_logs() { return log_messages; }
+		string get_name() { return signal_name; }
+		void set_logs(vector<LogMsg> in_logs) { log_messages = in_logs; }
+		void set_name(string in_name) { signal_name = in_name; }
+		LogMsg first() { return log_messages[0]; }
+};
+
+string log_to_string(LogMsg in_log_msg) {
 	string out_string = "";
 
 	return out_string + to_string(in_log_msg.get_timestamp()) + ", " + to_string(in_log_msg.get_id()) + ", " + to_string(in_log_msg.get_data()) + ", " + to_string(in_log_msg.get_channel());
@@ -43,12 +59,18 @@ string log_to_string(Log in_log_msg) {
 
 //funzione per eseguire script python per leggere i dati da file blf
 void run_python_file(string& file_name) {
-	string command = "py ";
+	ifstream open_file("open_info.txt");
+	string command;
 
-	command += file_name;
+	open_file >> command;
+	command += (" " + file_name);
+
+	open_file.close();
+
 	system(command.c_str());
 }
 
+// funzione per estrarre il nome di un file dato il suo percorso
 string getFileName(const string filePath) {
 	size_t lastSlash = filePath.find_last_of("\\/");			// Trova l'ultimo separatore
 	if (lastSlash != std::string::npos) {
@@ -58,13 +80,13 @@ string getFileName(const string filePath) {
 }
 
 // funzione utile per assegnare il nome a un messaggio di log dato il suo id
-void assign_log_name(Log& in_log, int id, string name) {
+void assign_log_name(LogMsg& in_log, int id, string name) {
 	if (in_log.get_id() == id)
 		in_log.set_name(name);
 }
 
 //legge i dati di ogni messaggio contenuto nel file txt in formato csv e li memorizza in un vettore di oggetti Log
-void read_data_from_txt(vector<Log>& L_log)
+void read_data_from_txt(vector<LogMsg>& L_log)
 {
 
 	string filename = "read_blf.py";
@@ -97,7 +119,7 @@ void read_data_from_txt(vector<Log>& L_log)
 			tk_ch >> tmp_ch;
 
 			//Creazione di un array di elementi della classe Log
-			Log tmp_log(tmp_timestamp, tmp_datas, tmp_id, tmp_ch, str_name);
+			LogMsg tmp_log(tmp_timestamp, tmp_datas, tmp_id, tmp_ch, str_name);
 			L_log.push_back(tmp_log);
 
 		}
@@ -112,7 +134,7 @@ void read_data_from_txt(vector<Log>& L_log)
 
 
 //ricerca un messaggio di log in base all'ID (utilizzata in list_foreach_id) e ne restituisce l'indice in list_for_id
-int search_msg_by_id(vector<vector<Log>>& in_list, int id_to_search) {
+int search_msg_by_id(vector<vector<LogMsg>>& in_list, int id_to_search) {
 	int index_id = 0;
 
 	for (int i = 0; i < in_list.size(); i++) {
@@ -125,9 +147,9 @@ int search_msg_by_id(vector<vector<Log>>& in_list, int id_to_search) {
 }
 
 //crea un vettore di vettori di log (di un canale dato) divisi per ID
-void list_foreach_id(vector<Log>& log_list, vector<vector<Log>>& list_for_id, int in_channel) {
+void list_foreach_id(vector<LogMsg>& log_list, vector<vector<LogMsg>>& list_for_id, int in_channel) {
 	for (int i = 0; i < log_list.size(); i++) {
-		Log tmp_log = log_list[i];
+		LogMsg tmp_log = log_list[i];
 
 		if (tmp_log.get_channel() != in_channel)
 			continue;
@@ -138,7 +160,7 @@ void list_foreach_id(vector<Log>& log_list, vector<vector<Log>>& list_for_id, in
 			list_for_id[id_index].push_back(tmp_log);
 		}
 		else {
-			vector<Log> new_id_vector;
+			vector<LogMsg> new_id_vector;
 			new_id_vector.push_back(tmp_log);
 			list_for_id.push_back(new_id_vector);
 		}
@@ -148,14 +170,14 @@ void list_foreach_id(vector<Log>& log_list, vector<vector<Log>>& list_for_id, in
 }
 
 //estraggo da un vettore di log i timestamp e i data, visual limit imposta il numero di dati estratti
-void extract_time_data(vector<Log> in_logs, vector<double>& in_time, vector<double>& in_data, int visual_limit) {
+void extract_time_data(vector<LogMsg> in_logs, vector<double>& in_time, vector<double>& in_data, int visual_limit) {
 
 	for (int i = visual_limit - BASE_VISUAL_LIMIT; i < in_logs.size(); i++) {
 
 		if (i > visual_limit)
 			break;
 
-		Log tmp_log = in_logs[i];
+		LogMsg tmp_log = in_logs[i];
 
 		in_time.push_back(tmp_log.get_timestamp());
 		in_data.push_back(tmp_log.get_data());
@@ -163,18 +185,23 @@ void extract_time_data(vector<Log> in_logs, vector<double>& in_time, vector<doub
 }
 
 // Scrittura file in formato csv (il file txt è presente nella cartella dell'eseguibile)
-void write_csv_file(vector<Log> to_export_logs) {
-	ofstream export_csv_file("csv_log_export.txt");
+bool write_csv_file(vector<LogMsg> to_export_logs) {
+	string tmp_log_name = to_export_logs[0].get_name();
+	ofstream export_csv_file("CSV\\csv_" + tmp_log_name + ".txt");
 
 	for (int i = 0; i < to_export_logs.size(); i++) {
 		export_csv_file << log_to_string(to_export_logs[i]) << endl;
 	}
 
 	export_csv_file.close();
+
+	return true;
 }
 
+// funzione per scrivere il path della dbc inserita dal textbox nel file dbc_names.txt
 void write_dbc_path(wxTextCtrl* dbc_name) {
-	ofstream dbc_names_file("dbc_names.txt");
+	ofstream dbc_names_file;
+	dbc_names_file.open("dbc_names.txt", ios_base::app);
 
 	wxString tmp_dbc_path = dbc_name->GetValue();
 
@@ -182,25 +209,27 @@ void write_dbc_path(wxTextCtrl* dbc_name) {
 	dbc_names_file.close();
 }
 
-void delete_dbc_path(wxString dbc_name){
+// funzione per cancellare il path di una dbc dal file dbc_names.txt
+void delete_dbc_path(wxString dbc_name) {
 	ifstream dbc_names_file("dbc_names.txt");
 	string tmp_dbc;
 	vector<string> tmp_dbc_list;
 
-	while (dbc_names_file >> tmp_dbc) {
-		if (dbc_name.ToStdString() != getFileName(tmp_dbc)) {
+	while (dbc_names_file >> tmp_dbc) {								//copio i path delle dbc presenti nel file in un vettore temporaneo
+		if (dbc_name.ToStdString() != getFileName(tmp_dbc)) {		//tranne il path di quella da cancellare
 			tmp_dbc_list.push_back(tmp_dbc);
 		}
 	}
 	dbc_names_file.close();
 
-	ofstream dbc_names_out_file("dbc_names.txt");
+	ofstream dbc_names_out_file("dbc_names.txt");					//riscrivo il file con i path rimanenti
 
 	for (int i = 0; i < tmp_dbc_list.size(); i++) {
 		dbc_names_out_file << tmp_dbc_list[i] << endl;
 	}
 }
 
+// funzione per scrivere nel listbox delle dbc il nome di ciascuna dbc presente nel file dbc_names.txt
 void write_dbc_list(wxListBox* dbc_list) {
 	ifstream dbc_names_file("dbc_names.txt");
 	string str_path;
@@ -215,9 +244,9 @@ void write_dbc_list(wxListBox* dbc_list) {
 	dbc_names_file.close();
 }
 
-void assign_name_to_id(vector<Log>& logs) {
+// funzione per assegnare il nome a un messaggio di log corrispondente al suo id
+void assign_name_to_id(vector<LogMsg>& logs) {
 	ifstream id_names_file("id_names.txt");
-
 	string str_id, str_name;
 	while (getline(id_names_file, str_id, ',')) {
 		getline(id_names_file, str_name);
