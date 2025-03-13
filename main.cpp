@@ -16,17 +16,18 @@ private:
     wxListBox* DbcList;
     wxMenuBar* menuBar;
     wxMenu* file_menu;
+    wxMenu* export_csv;
     wxMenuItem* export_csv_1;
     wxMenuItem* open_file;
     wxMenuItem* export_csv_2;
-    wxMenu* options_menu;
+    wxMenu* plot_menu;
     wxMenu* export_partial_plot;
     //wxMenu* export_total_plot;
     wxMenuItem* export_part_1;
     wxMenuItem* export_part_2;
     //wxMenuItem* export_tot_1;
     //wxMenuItem* export_tot_2;
-    wxMenu* help_menu;
+    wxMenu* quit_menu;
     wxMenuItem* quit;
     wxButton* first_nextDataButton;
     wxButton* first_previousDataButton;
@@ -43,7 +44,7 @@ private:
     wxStaticText* id_text;
     wxStaticText* dbc_text;
     vector<LogMsg> logs_from_blf;
-    vector<vector<vector<LogMsg>>> log_channels;
+    vector<vector<LogSignal>> log_channels;
 
     // variabili per visualizzazione grafici
     int first_selected_channel = 0, first_selected_id = 0, first_visual_limit = BASE_VISUAL_LIMIT;
@@ -51,15 +52,17 @@ private:
     int tmp_selected_plot = 0;
 
     void CreatePlot(int channel, int index, int visual_limit, mpWindow* in_plot);
+    void ExportPlotPNG(mpWindow* in_plot, int channel, int index);
     void OnOpen(wxCommandEvent& event);
+    void OnClose(wxCommandEvent& event);
     void OnChannelListSelect(wxCommandEvent& event);
     void OnIdListSelect(wxCommandEvent& event);
     void OnFirstNextData(wxCommandEvent& event);
     void OnFirstPreviousData(wxCommandEvent& event);
     void OnSecondNextData(wxCommandEvent& event);
     void OnSecondPreviousData(wxCommandEvent& event);
-    void OnExport1(wxCommandEvent& event);
-    void OnExport2(wxCommandEvent& event);
+    void OnExportUpperCSV(wxCommandEvent& event);
+    void OnExportLowerCSV(wxCommandEvent& event);
     void OnPlotOne(wxCommandEvent& event);
     void OnPlotTwo(wxCommandEvent& event);
     void OnInsertDBC(wxCommandEvent& event);
@@ -74,24 +77,27 @@ AppFrame::AppFrame(const wxString& titolo, const wxPoint& pos, const wxSize& siz
 
     wxPanel* panel = new wxPanel(this, wxID_ANY);
 
-    //creazione barra dei menu
+    //creazione barra dei menu (le righe commentate sono per l'esportazione del grafico completo non ancora implementata)
     menuBar = new wxMenuBar();
     file_menu = new wxMenu();
-    options_menu = new wxMenu();
+    export_csv = new wxMenu();
+    plot_menu = new wxMenu();
     export_partial_plot = new wxMenu();
     //export_total_plot = new wxMenu();
-    help_menu = new wxMenu();
+    quit_menu = new wxMenu();
     export_part_1 = new wxMenuItem(export_partial_plot, 0, "Upper Plot");
     export_part_2 = new wxMenuItem(export_partial_plot, 1, "Lower Plot");
     //export_tot_1 = new wxMenuItem(export_total_plot, 2, "Upper Plot");
     //export_tot_2 = new wxMenuItem(export_total_plot, 3, "Lower Plot");
-    export_csv_1 = new wxMenuItem(file_menu, 4, "Export CSV Upper Plot");
-    export_csv_2 = new wxMenuItem(file_menu, 5, "Export CSV Lower Plot");
+    export_csv_1 = new wxMenuItem(export_csv, 4, "Export CSV Upper Signal");
+    export_csv_2 = new wxMenuItem(export_csv, 5, "Export CSV Lower Signal");
+    quit = new wxMenuItem(quit_menu, 6, "Close App");
 
-    file_menu->Append(export_csv_1);
-    file_menu->Append(export_csv_2);
-    file_menu->Bind(wxEVT_MENU, &AppFrame::OnExport1, this, export_csv_1->GetId());
-    file_menu->Bind(wxEVT_MENU, &AppFrame::OnExport2, this, export_csv_2->GetId());
+    export_csv->Append(export_csv_1);
+    export_csv->Append(export_csv_2);
+    export_csv->Bind(wxEVT_MENU, &AppFrame::OnExportUpperCSV, this, export_csv_1->GetId());
+    export_csv->Bind(wxEVT_MENU, &AppFrame::OnExportLowerCSV, this, export_csv_2->GetId());
+    file_menu->AppendSubMenu(export_csv, "Export CSV", wxEmptyString);
     //export_total_plot->Append(export_tot_1);
     //export_total_plot->Append(export_tot_2);
     //export_total_plot->Bind(wxEVT_MENU, &AppFrame::OnExportTotalUpperPlot, this, export_tot_1->GetId());
@@ -100,10 +106,12 @@ AppFrame::AppFrame(const wxString& titolo, const wxPoint& pos, const wxSize& siz
     export_partial_plot->Append(export_part_2);
     export_partial_plot->Bind(wxEVT_MENU, &AppFrame::OnExportUpperPlot, this, export_part_1->GetId());
     export_partial_plot->Bind(wxEVT_MENU, &AppFrame::OnExportLowerPlot, this, export_part_2->GetId());
-    options_menu->AppendSubMenu(export_partial_plot, "Export Partial", wxEmptyString);
+    plot_menu->AppendSubMenu(export_partial_plot, "Export Partial", wxEmptyString);
+    quit_menu->Append(quit);
+    quit_menu->Bind(wxEVT_MENU, &AppFrame::OnClose, this, quit->GetId());
     menuBar->Append(file_menu, "File");
-    menuBar->Append(options_menu, "Plot");
-    menuBar->Append(help_menu, "Help");
+    menuBar->Append(plot_menu, "Plot");
+    menuBar->Append(quit_menu, "Quit");
 
 
     // Creazione della listbox con 3 opzioni
@@ -144,6 +152,7 @@ AppFrame::AppFrame(const wxString& titolo, const wxPoint& pos, const wxSize& siz
     text_dbc = new wxTextCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, "text_dbc");
     text_dbc->SetHint("Insert DBC Path Here");
 
+    // impostazione pulsante e casella di testo per inserimento file blf
     load_log = new wxButton(panel, wxID_ANY, "Load LOG", wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, "load_log");
     load_log->Bind(wxEVT_BUTTON, &AppFrame::OnOpen, this);
     text_log = new wxTextCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, 0, wxDefaultValidator, "text_log");
@@ -244,105 +253,26 @@ void AppFrame::OnOpen(wxCommandEvent& event) {
     read_data_from_txt(logs_from_blf);
     //assign_name_to_id(logs_from_blf);                           // assegnazione nomi tramite dbc
     //divisione degli oggetti Log per id e per channel
-    vector<vector<LogMsg>> id_channel_zero, id_channel_one;
+    vector<LogSignal> id_channel_zero, id_channel_one;
     list_foreach_id(logs_from_blf, id_channel_zero, 0);
     list_foreach_id(logs_from_blf, id_channel_one, 1);
+    assign_name_to_id(id_channel_zero);
+    assign_name_to_id(id_channel_one);
 
     log_channels.push_back(id_channel_zero);
     log_channels.push_back(id_channel_one);
+
+    wxMessageBox("Caricamento completato!", "Informazione", wxOK | wxICON_INFORMATION);
 }
 
-void AppFrame::OnExport1(wxCommandEvent& event) {
-    if (write_csv_file(log_channels[first_selected_channel][first_selected_id])) {
-        string file_name = log_channels[first_selected_channel][first_selected_id][0].get_name();
-        wxMessageBox("Il segnale " + file_name + " salvato in csv come csv_" + file_name, "Salvataggio", wxOK | wxICON_INFORMATION);
-    }
-}
-
-void AppFrame::OnExport2(wxCommandEvent& event) {
-    if (write_csv_file(log_channels[second_selected_channel][second_selected_id])) {
-        string file_name = log_channels[second_selected_channel][second_selected_id][0].get_name();
-        wxMessageBox("Il segnale " + file_name + " salvato in csv come csv_" + file_name, "Salvataggio", wxOK | wxICON_INFORMATION);
-    }
-}
-
-void AppFrame::OnExportUpperPlot(wxCommandEvent& event) {
-    if (first_plot->CountLayers() == 0) {
-        wxMessageBox("Attenzione! Grafico superiore vuoto", "Warning", wxOK| wxICON_WARNING);
-        return;
-    }
-    wxInitAllImageHandlers();
-    // Creare un wxBitmap della dimensione della finestra del grafico
-    wxSize size = first_plot->GetClientSize();
-    wxBitmap bmp(size.x, size.y);
-
-    // Creare un wxClientDC per catturare il contenuto della finestra
-    wxClientDC dc(first_plot);
-    wxMemoryDC memDC;
-    memDC.SelectObject(bmp);
-    memDC.Blit(0, 0, size.x, size.y, &dc, 0, 0);            // Copia il contenuto del DC
-    memDC.SelectObject(wxNullBitmap);                       // Rilascia il wxBitmap
-
-    // Convertire il bitmap in immagine e salvarlo come PNG
-    wxImage img = bmp.ConvertToImage();
-    wxString filename = "partial_" + log_channels[first_selected_channel][first_selected_id][0].get_name() + ".png";
-    if (img.SaveFile("PNG\\ " + filename, wxBITMAP_TYPE_PNG))
-        wxMessageBox("Grafico salvato come " + filename, "Salvataggio", wxOK | wxICON_INFORMATION);
-    else
-        wxMessageBox("Errore nel salvataggio!", "Errore", wxOK | wxICON_ERROR);
-}
-
-void AppFrame::OnExportLowerPlot(wxCommandEvent& event) {
-    if (first_plot->CountLayers() == 0) {
-        wxMessageBox("Attenzione! Grafico superiore vuoto", "Warning", wxOK | wxICON_WARNING);
-        return;
-    }
-    wxInitAllImageHandlers();
-    // Creare un wxBitmap della dimensione della finestra del grafico
-    wxSize size = second_plot->GetClientSize();
-    wxBitmap bmp(size.x, size.y);
-
-    // Creare un wxClientDC per catturare il contenuto della finestra
-    wxClientDC dc(second_plot);
-    wxMemoryDC memDC;
-    memDC.SelectObject(bmp);
-    memDC.Blit(0, 0, size.x, size.y, &dc, 0, 0);            // Copia il contenuto del DC
-    memDC.SelectObject(wxNullBitmap);                       // Rilascia il wxBitmap
-
-    // Convertire il bitmap in immagine e salvarlo come PNG
-    wxImage img = bmp.ConvertToImage();
-    wxString filename = "partial_" + log_channels[second_selected_channel][second_selected_id][0].get_name() + ".png";
-    if (img.SaveFile("PNG\\ " + filename, wxBITMAP_TYPE_PNG))
-        wxMessageBox("Grafico salvato come " + filename, "Salvataggio", wxOK | wxICON_INFORMATION);
-    else
-        wxMessageBox("Errore nel salvataggio!", "Errore", wxOK | wxICON_ERROR);
-}
-
-/********** Esportazione grafico completo *********
-void AppFrame::OnExportTotalUpperPlot(wxCommandEvent& event) {
-    write_csv_file(log_channels[first_selected_channel][first_selected_id]);
-    string py_file = "export_total_plot.py";
-    run_python_file(py_file);
-}
-
-void AppFrame::OnExportTotalLowerPlot(wxCommandEvent& event) {
-    write_csv_file(log_channels[second_selected_channel][second_selected_id]);
-    string py_file = "export_total_plot.py";
-    run_python_file(py_file);
-}
-*/
-
-// selezione grafico superiore
-void AppFrame::OnPlotOne(wxCommandEvent& event) {
-    tmp_selected_plot = 0;
-    plot_one->SetBackgroundColour(*wxLIGHT_GREY);
-    plot_two->SetBackgroundColour(*wxWHITE);
-}
-// selezione grafico inferiore
-void AppFrame::OnPlotTwo(wxCommandEvent& event) {
-    tmp_selected_plot = 1;
-    plot_one->SetBackgroundColour(*wxWHITE);
-    plot_two->SetBackgroundColour(*wxLIGHT_GREY);
+// Chiusura applicazione
+void AppFrame::OnClose(wxCommandEvent& event) {
+    log_channels.clear();
+    logs_from_blf.clear();
+    ofstream id_names_file("id_names.txt");
+    id_names_file.clear();
+    id_names_file.close();
+    Destroy();
 }
 
 // funzione di creazione del grafico (passato come parametro) di un segnale selezionato
@@ -353,7 +283,7 @@ void AppFrame::CreatePlot(int channel, int index, int visual_limit, mpWindow* in
     vector<double> data;
     vector<double> time_stmp;
 
-    extract_time_data(log_channels[channel][index], time_stmp, data, visual_limit);
+    extract_time_data(log_channels[channel][index].get_logs(), time_stmp, data, visual_limit);
 
     // Usa la serie selezionata per il grafico
     mpFXYVector* data_layer = new mpFXYVector("", mpALIGN_CENTER);
@@ -376,14 +306,86 @@ void AppFrame::CreatePlot(int channel, int index, int visual_limit, mpWindow* in
     in_plot->EnableMousePanZoom(false);
     in_plot->Fit();
     in_plot->Refresh();
-
 }
+
+void AppFrame::ExportPlotPNG(mpWindow* in_plot, int channel, int index) {
+    if (in_plot->CountLayers() == 0) {
+        wxMessageBox("Attenzione! Grafico superiore vuoto", "Warning", wxOK | wxICON_WARNING);
+        return;
+    }
+    wxInitAllImageHandlers();
+    // Creare un wxBitmap della dimensione della finestra del grafico
+    wxSize size = in_plot->GetClientSize();
+    wxBitmap bmp(size.x, size.y);
+
+    // Creare un wxClientDC per catturare il contenuto della finestra
+    wxClientDC dc(in_plot);
+    wxMemoryDC memDC;
+    memDC.SelectObject(bmp);
+    memDC.Blit(0, 0, size.x, size.y, &dc, 0, 0);            // Copia il contenuto del DC
+    memDC.SelectObject(wxNullBitmap);                       // Rilascia il wxBitmap
+
+    // Convertire il bitmap in immagine e salvarlo come PNG
+    wxImage img = bmp.ConvertToImage();
+    wxString filename = "partial_" + log_channels[channel][index].get_name() + ".png";
+    if (img.SaveFile("PNG\\ " + filename, wxBITMAP_TYPE_PNG))
+        wxMessageBox("Grafico salvato come " + filename, "Salvataggio", wxOK | wxICON_INFORMATION);
+    else
+        wxMessageBox("Errore nel salvataggio!", "Errore", wxOK | wxICON_ERROR);
+}
+
+// esportazione in csv del segnale presente nel grafico superiore
+void AppFrame::OnExportUpperCSV(wxCommandEvent& event) {
+    if (first_plot->CountLayers() == 0) {
+        wxMessageBox("Attenzione! Nessun grafico impostato", "Warning", wxOK | wxICON_WARNING);
+        return;
+    }
+    if (write_csv_file(log_channels[first_selected_channel][first_selected_id])) {
+        string file_name = log_channels[first_selected_channel][first_selected_id].get_name();
+        wxMessageBox("Il segnale " + file_name + " salvato in csv come csv_" + file_name, "Salvataggio", wxOK | wxICON_INFORMATION);
+    }
+}
+
+// esportazione in csv del grafico presente nel grafico inferiore
+void AppFrame::OnExportLowerCSV(wxCommandEvent& event) {
+    if (second_plot->CountLayers() == 0) {
+        wxMessageBox("Attenzione! Nessun grafico impostato", "Warning", wxOK | wxICON_WARNING);
+        return;
+    }
+    if (write_csv_file(log_channels[second_selected_channel][second_selected_id])) {
+        string file_name = log_channels[second_selected_channel][second_selected_id].get_name();
+        wxMessageBox("Il segnale " + file_name + " salvato in csv come csv_" + file_name, "Salvataggio", wxOK | wxICON_INFORMATION);
+    }
+}
+
+void AppFrame::OnExportUpperPlot(wxCommandEvent& event) {
+    ExportPlotPNG(first_plot, first_selected_channel, first_selected_id);
+}
+
+void AppFrame::OnExportLowerPlot(wxCommandEvent& event) {
+    ExportPlotPNG(second_plot, second_selected_channel, second_selected_id);
+}
+
+/********** Esportazione grafico completo (non ancora implementata)*********
+void AppFrame::OnExportTotalUpperPlot(wxCommandEvent& event) {
+    write_csv_file(log_channels[first_selected_channel][first_selected_id]);
+    string py_file = "export_total_plot.py";
+    run_python_file(py_file);
+}
+
+void AppFrame::OnExportTotalLowerPlot(wxCommandEvent& event) {
+    write_csv_file(log_channels[second_selected_channel][second_selected_id]);
+    string py_file = "export_total_plot.py";
+    run_python_file(py_file);
+}
+*****************************************************************************/
 
 // funzione per selezionare il canale di cui visualizzare gli id
 void AppFrame::OnChannelListSelect(wxCommandEvent& event) {
     int tmp_channel = ChannelList->GetSelection();
     if (tmp_channel != wxNOT_FOUND && !logs_from_blf.empty()) {
 
+        // selezione grafico da impostare
         if (tmp_selected_plot == 0) {
             first_selected_channel = tmp_channel;
             first_selected_id = 0;
@@ -394,15 +396,19 @@ void AppFrame::OnChannelListSelect(wxCommandEvent& event) {
         }
 
         IdList->Clear();
-        vector<vector<LogMsg>> tmp_id_vector = log_channels[tmp_channel];
+        vector<LogSignal> tmp_id_vector = log_channels[tmp_channel];
 
         // Aggiorno la listbox degli id con quelli del channel selezionato
         for (int i = 0; i < tmp_id_vector.size(); i++) {
             wxString tmp_id;
-            if (tmp_id_vector[i][0].get_name() == "")
-                tmp_id << "ID: " << tmp_id_vector[i][0].get_id();
+            if (tmp_id_vector[i].get_name() == "") {
+                stringstream stream;
+                stream << hex << tmp_id_vector[i].first().get_id();
+                string result(stream.str());
+                tmp_id << "ID: " << result;
+            }
             else
-                tmp_id << tmp_id_vector[i][0].get_name();
+                tmp_id << tmp_id_vector[i].get_name();
 
             IdList->AppendString(tmp_id);
         }
@@ -414,6 +420,7 @@ void AppFrame::OnIdListSelect(wxCommandEvent& event) {
     int tmp_id = IdList->GetSelection();
     if (tmp_id != wxNOT_FOUND) {
 
+        //selezione grafico da impostare
         if (tmp_selected_plot == 0) {
             first_selected_id = tmp_id;
             first_visual_limit = BASE_VISUAL_LIMIT;
@@ -427,55 +434,13 @@ void AppFrame::OnIdListSelect(wxCommandEvent& event) {
     }
 }
 
-// funzioni per spostarsi nel grafico superiore
-void AppFrame::OnFirstNextData(wxCommandEvent& event) {
-    if (logs_from_blf.empty() || first_plot->CountLayers() == 0)
-        return;
-    if (first_visual_limit > log_channels[first_selected_channel][first_selected_id].size())
-        return;
-
-    first_visual_limit += BASE_VISUAL_LIMIT;
-    CreatePlot(first_selected_channel, first_selected_id, first_visual_limit, first_plot);
-}
-
-void AppFrame::OnFirstPreviousData(wxCommandEvent& event) {
-    if (logs_from_blf.empty() || first_plot->CountLayers() == 0)
-        return;
-    if (first_visual_limit <= BASE_VISUAL_LIMIT)
-        return;
-
-    first_visual_limit -= BASE_VISUAL_LIMIT;
-    CreatePlot(first_selected_channel, first_selected_id, first_visual_limit, first_plot);
-}
-
-// funzioni per spostarsi nel grafico inferiore
-void AppFrame::OnSecondNextData(wxCommandEvent& event) {
-    if (logs_from_blf.empty() || second_plot->CountLayers() == 0)
-        return;
-    if (second_visual_limit > log_channels[second_selected_channel][second_selected_id].size())
-        return;
-
-    second_visual_limit += BASE_VISUAL_LIMIT;
-    CreatePlot(second_selected_channel, second_selected_id, second_visual_limit, second_plot);
-}
-
-void AppFrame::OnSecondPreviousData(wxCommandEvent& event) {
-    if (logs_from_blf.empty() || second_plot->CountLayers() == 0)
-        return;
-    if (second_visual_limit <= BASE_VISUAL_LIMIT)
-        return;
-
-    second_visual_limit -= BASE_VISUAL_LIMIT;
-    CreatePlot(second_selected_channel, second_selected_id, second_visual_limit, second_plot);
-}
-
 // funzione inserimento dbc nel file di testo dbc_names e nella listbox dedicato alle dbc
 void AppFrame::OnInsertDBC(wxCommandEvent& event) {
     if (text_dbc->IsEmpty()) {
         wxMessageBox("Attenzione! Inserire prima il percorso della DBC", "Warning", wxOK | wxICON_WARNING);
         return;
     }
-     
+
     wxString dbc_path = text_dbc->GetValue();
 
     // controllo se la dbc è già presente nel listbox
@@ -509,6 +474,61 @@ void AppFrame::OnDeleteDBC(wxCommandEvent& event) {
     }
 }
 
+// selezione grafico superiore
+void AppFrame::OnPlotOne(wxCommandEvent& event) {
+    tmp_selected_plot = 0;
+    plot_one->SetBackgroundColour(*wxLIGHT_GREY);
+    plot_two->SetBackgroundColour(*wxWHITE);
+}
+// selezione grafico inferiore
+void AppFrame::OnPlotTwo(wxCommandEvent& event) {
+    tmp_selected_plot = 1;
+    plot_one->SetBackgroundColour(*wxWHITE);
+    plot_two->SetBackgroundColour(*wxLIGHT_GREY);
+}
+
+// funzioni per spostarsi nel grafico superiore
+void AppFrame::OnFirstNextData(wxCommandEvent& event) {
+    if (logs_from_blf.empty() || first_plot->CountLayers() == 0)
+        return;
+    if (first_visual_limit > log_channels[first_selected_channel][first_selected_id].get_logs().size())
+        return;
+
+    first_visual_limit += BASE_VISUAL_LIMIT;
+    CreatePlot(first_selected_channel, first_selected_id, first_visual_limit, first_plot);
+}
+
+void AppFrame::OnFirstPreviousData(wxCommandEvent& event) {
+    if (logs_from_blf.empty() || first_plot->CountLayers() == 0)
+        return;
+    if (first_visual_limit <= BASE_VISUAL_LIMIT)
+        return;
+
+    first_visual_limit -= BASE_VISUAL_LIMIT;
+    CreatePlot(first_selected_channel, first_selected_id, first_visual_limit, first_plot);
+}
+
+// funzioni per spostarsi nel grafico inferiore
+void AppFrame::OnSecondNextData(wxCommandEvent& event) {
+    if (logs_from_blf.empty() || second_plot->CountLayers() == 0)
+        return;
+    if (second_visual_limit > log_channels[second_selected_channel][second_selected_id].get_logs().size())
+        return;
+
+    second_visual_limit += BASE_VISUAL_LIMIT;
+    CreatePlot(second_selected_channel, second_selected_id, second_visual_limit, second_plot);
+}
+
+void AppFrame::OnSecondPreviousData(wxCommandEvent& event) {
+    if (logs_from_blf.empty() || second_plot->CountLayers() == 0)
+        return;
+    if (second_visual_limit <= BASE_VISUAL_LIMIT)
+        return;
+
+    second_visual_limit -= BASE_VISUAL_LIMIT;
+    CreatePlot(second_selected_channel, second_selected_id, second_visual_limit, second_plot);
+}
+
 class LogApp : public wxApp {
 public:
     virtual bool OnInit();
@@ -516,6 +536,9 @@ public:
 
 bool LogApp::OnInit() {
     AppFrame* frame = new AppFrame("LogApp", wxPoint(50, 50), wxSize(1280, 720));
+    wxIcon icon;
+    icon.LoadFile("icons\\icon.ico", wxBITMAP_TYPE_ICO);
+    frame->SetIcon(icon);
     frame->Show(true);
     return true;
 }
