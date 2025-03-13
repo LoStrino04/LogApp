@@ -24,28 +24,24 @@ class Log:
         self._name = in_name
 
 def main():
-    # Percorso file dbc
-    #dbc_paths = []
+    # Percorso files dbc
+    dbc_paths = []
     # Percorso del file BLF
-    blf_file = "LogTorque_013125_160826.blf"
+    blf_file = ""
     # File .txt dove scrivere i dati del log
     txt_file = "log_datas.txt"
     # Liste per memorizzare i dati
     logs = []
     messages = []
-    dbc_paths = []
 
-    #C:\\Users\\Utente\\Desktop\\Racing Team\\DBC\\VCU_TELEMETRY_CAN.dbc
-    #C:\\Users\\Utente\\Desktop\\Racing Team\\DBC\\BMS_DEBUG_CAN_old.dbc
-    #"C:\\Users\\Elia\\Desktop\\Racing Team\\DBC\\BMS_DEBUG_CAN_old.dbc"
-    #"C:\\Users\\Elia\\Desktop\\Racing Team\\DBC\\VCU_TELEMETRY_CAN.dbc"
-    
+    with open("blf_name.txt") as blf_name:
+        blf_file = blf_name.readline()
+
     with open("dbc_names.txt") as dbc_file:
         for dbc_path in dbc_file:
             dbc_paths.append(dbc_path[:len(dbc_path) - 1])
-            print(dbc_path)
     
-    # Aprire e leggere il file BLF
+    # Aprire e leggere il file BLF e creazione di una lista di tuple (id,data,nome) con un elemento per ogni id
     with can.BLFReader(blf_file) as log:
         for msg in log:
             tmp_log = Log(msg.timestamp,int.from_bytes(msg.data, byteorder='little'),msg.arbitration_id,msg.channel, "")
@@ -60,7 +56,7 @@ def main():
             
             messages.append((msg.arbitration_id, msg.data, ""))
 
-
+    # cerco in ogni dbc il nome corrispondente ad ogni id nella lista precedentemente creata
     with open("id_names.txt", "a") as id_names_file:
         for db_path in dbc_paths:
             db = cantools.database.load_file(db_path)
@@ -79,7 +75,6 @@ def main():
                     continue
 
                 msg_tuple = msg_tuple[0],msg_tuple[1],tmp_name
-                print(tmp_name)
                 id_names_file.write(f"{msg_tuple[0]},{tmp_name}")
                 id_names_file.write("\n")
 
