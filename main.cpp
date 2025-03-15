@@ -29,6 +29,7 @@ private:
     //wxMenuItem* export_tot_2;
     wxMenu* quit_menu;
     wxMenuItem* quit;
+    wxMenuItem* close_blf;
     wxButton* first_nextDataButton;
     wxButton* first_previousDataButton;
     wxButton* second_nextDataButton;
@@ -55,6 +56,7 @@ private:
     void ExportPlotPNG(mpWindow* in_plot, int channel, int index);
     void OnOpen(wxCommandEvent& event);
     void OnClose(wxCommandEvent& event);
+    void OnCloseBLF(wxCommandEvent& event);
     void OnChannelListSelect(wxCommandEvent& event);
     void OnIdListSelect(wxCommandEvent& event);
     void OnFirstNextData(wxCommandEvent& event);
@@ -92,12 +94,15 @@ AppFrame::AppFrame(const wxString& titolo, const wxPoint& pos, const wxSize& siz
     export_csv_1 = new wxMenuItem(export_csv, 4, "Export CSV Upper Signal");
     export_csv_2 = new wxMenuItem(export_csv, 5, "Export CSV Lower Signal");
     quit = new wxMenuItem(quit_menu, 6, "Close App");
+    close_blf = new wxMenuItem(file_menu, 7, "Close BLF");
 
     export_csv->Append(export_csv_1);
     export_csv->Append(export_csv_2);
     export_csv->Bind(wxEVT_MENU, &AppFrame::OnExportUpperCSV, this, export_csv_1->GetId());
     export_csv->Bind(wxEVT_MENU, &AppFrame::OnExportLowerCSV, this, export_csv_2->GetId());
     file_menu->AppendSubMenu(export_csv, "Export CSV", wxEmptyString);
+    file_menu->Append(close_blf);
+    file_menu->Bind(wxEVT_MENU, &AppFrame::OnCloseBLF, this, close_blf->GetId());
     //export_total_plot->Append(export_tot_1);
     //export_total_plot->Append(export_tot_2);
     //export_total_plot->Bind(wxEVT_MENU, &AppFrame::OnExportTotalUpperPlot, this, export_tot_1->GetId());
@@ -228,7 +233,7 @@ AppFrame::AppFrame(const wxString& titolo, const wxPoint& pos, const wxSize& siz
 
     write_dbc_list(DbcList);
     SetMenuBar(menuBar);
-    CreateStatusBar(4);
+    CreateStatusBar(2);
     Centre();
 }
 
@@ -266,9 +271,18 @@ void AppFrame::OnOpen(wxCommandEvent& event) {
 }
 
 // Chiusura applicazione
-void AppFrame::OnClose(wxCommandEvent& event) {
+void AppFrame::OnCloseBLF(wxCommandEvent& event) {
     log_channels.clear();
     logs_from_blf.clear();
+    first_plot->DelAllLayers(true);
+    second_plot->DelAllLayers(true);
+    IdList->Clear();
+    ofstream id_names_file("id_names.txt");
+    id_names_file.clear();
+    id_names_file.close();
+}
+
+void AppFrame::OnClose(wxCommandEvent& event) {
     ofstream id_names_file("id_names.txt");
     id_names_file.clear();
     id_names_file.close();
@@ -425,11 +439,13 @@ void AppFrame::OnIdListSelect(wxCommandEvent& event) {
             first_selected_id = tmp_id;
             first_visual_limit = BASE_VISUAL_LIMIT;
             CreatePlot(first_selected_channel, first_selected_id, first_visual_limit, first_plot);
+            SetStatusText("Upper Plot: " + log_channels[first_selected_channel][first_selected_id].get_name(), 0);
         }
         else {
             second_selected_id = tmp_id;
             second_visual_limit = BASE_VISUAL_LIMIT;
             CreatePlot(second_selected_channel, second_selected_id, second_visual_limit, second_plot);
+            SetStatusText("Lower Plot: " + log_channels[second_selected_channel][second_selected_id].get_name(), 1);
         }
     }
 }
@@ -442,6 +458,7 @@ void AppFrame::OnInsertDBC(wxCommandEvent& event) {
     }
 
     wxString dbc_path = text_dbc->GetValue();
+    wxString wx_dbc_name;
 
     // controllo se la dbc è già presente nel listbox
     for (int i = 0; i < DbcList->GetCount(); i++) {
@@ -453,13 +470,11 @@ void AppFrame::OnInsertDBC(wxCommandEvent& event) {
 
     DbcList->AppendString(dbc_path);
     write_dbc_path(text_dbc);
-
-    wxString wx_dbc_name;
+    
     wx_dbc_name << getFileName(string(dbc_path));
 
     DbcList->Delete(DbcList->GetCount() - 1);
     DbcList->AppendString(wx_dbc_name);
-
     text_dbc->Clear();
 }
 
