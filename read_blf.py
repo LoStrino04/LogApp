@@ -29,15 +29,15 @@ def main():
     # Percorso del file BLF
     blf_file = ""
     # File .txt dove scrivere i dati del log
-    txt_file = "log_datas.txt"
+    txt_file = "TXT\\log_datas.txt"
     # Liste per memorizzare i dati
     logs = []
     messages = []
 
-    with open("blf_name.txt") as blf_name:
+    with open("TXT\\blf_name.txt") as blf_name:
         blf_file = blf_name.readline()
 
-    with open("dbc_names.txt") as dbc_file:
+    with open("TXT\\dbc_names.txt") as dbc_file:
         for dbc_path in dbc_file:
             dbc_paths.append(dbc_path[:len(dbc_path) - 1])
     
@@ -57,7 +57,7 @@ def main():
             messages.append((msg.arbitration_id, msg.data, ""))
 
     # cerco in ogni dbc il nome corrispondente ad ogni id nella lista precedentemente creata
-    with open("id_names.txt", "a") as id_names_file:
+    with open("TXT\\id_names.txt", "a") as id_names_file:
         for db_path in dbc_paths:
             db = cantools.database.load_file(db_path)
             for msg_tuple in messages:
