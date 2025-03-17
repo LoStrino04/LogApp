@@ -1,9 +1,14 @@
 Indice:
+  - Setup
   - Caricamento BLF
   - Caricamento/ Cancellazione DBC
   - Visualizzazione Grafici
   - Esportazione
   - Consigli / Possibili Errori
+
+Setup: L'applicazione usa uno script python per estrarre i dati dal blf, quindi per eseguirla correttamente serve installare python e le seguenti librerie
+       - can ( pip install python-can )
+       - cantools (pip install cantools )
 
 Caricamento BLF: Copiare il percorso assoluto del file blf nella casella di testo corrispondente, scrivendolo con nel seguente formato
                  C:\\Users\\Nome\\BLF\\nome.blf
