@@ -277,13 +277,13 @@ void AppFrame::OnCloseBLF(wxCommandEvent& event) {
     first_plot->DelAllLayers(true);
     second_plot->DelAllLayers(true);
     IdList->Clear();
-    ofstream id_names_file("id_names.txt");
+    ofstream id_names_file("TXT\\id_names.txt");
     id_names_file.clear();
     id_names_file.close();
 }
 
 void AppFrame::OnClose(wxCommandEvent& event) {
-    ofstream id_names_file("id_names.txt");
+    ofstream id_names_file("TXT\\id_names.txt");
     id_names_file.clear();
     id_names_file.close();
     Destroy();
