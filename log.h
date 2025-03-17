@@ -10,9 +10,8 @@ private:
 	double data;
 	int id;
 	int channel;
-	string name;
 public:
-	LogMsg(double in_time = 0.0, double in_data = 0.0, int in_id = -1, int in_channel = -1, string in_name = "") {
+	LogMsg(double in_time = 0.0, double in_data = 0.0, int in_id = -1, int in_channel = -1) {
 		timestamp = in_time;
 		data = in_data;
 		id = in_id;
