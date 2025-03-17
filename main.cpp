@@ -249,7 +249,7 @@ void AppFrame::OnOpen(wxCommandEvent& event) {
         return;
     }
 
-    ofstream blf_name_file("blf_name.txt");
+    ofstream blf_name_file("TXT\\blf_name.txt");
     blf_name_file.clear();
     blf_name_file << text_log->GetValue();
     blf_name_file.close();
