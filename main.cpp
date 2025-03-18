@@ -1,6 +1,6 @@
 #include <wx/wx.h>
 #include <wx/grid.h>
-#include "mathplot.h"
+#include "lib\\mathplot.h"
 #include "readlog.h"
 
 
