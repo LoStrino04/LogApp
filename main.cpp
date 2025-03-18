@@ -249,14 +249,13 @@ void AppFrame::OnOpen(wxCommandEvent& event) {
         return;
     }
 
-    ofstream blf_name_file("TXT\\blf_name.txt");
-    blf_name_file.clear();
-    blf_name_file << text_log->GetValue();
-    blf_name_file.close();
+    ofstream blf_name(blf_name_file);
+    blf_name.clear();
+    blf_name << text_log->GetValue();
+    blf_name.close();
 
     // Legge i dati dal file blf
     read_data_from_txt(logs_from_blf);
-    //assign_name_to_id(logs_from_blf);                           // assegnazione nomi tramite dbc
     //divisione degli oggetti Log per id e per channel
     vector<LogSignal> id_channel_zero, id_channel_one;
     list_foreach_id(logs_from_blf, id_channel_zero, 0);
@@ -277,13 +276,13 @@ void AppFrame::OnCloseBLF(wxCommandEvent& event) {
     first_plot->DelAllLayers(true);
     second_plot->DelAllLayers(true);
     IdList->Clear();
-    ofstream id_names_file("TXT\\id_names.txt");
+    ofstream id_names_file(id_name_file);
     id_names_file.clear();
     id_names_file.close();
 }
 
 void AppFrame::OnClose(wxCommandEvent& event) {
-    ofstream id_names_file("TXT\\id_names.txt");
+    ofstream id_names_file(id_name_file);
     id_names_file.clear();
     id_names_file.close();
     Destroy();
@@ -470,7 +469,7 @@ void AppFrame::OnInsertDBC(wxCommandEvent& event) {
 
     DbcList->AppendString(dbc_path);
     write_dbc_path(text_dbc);
-    
+
     wx_dbc_name << getFileName(string(dbc_path));
 
     DbcList->Delete(DbcList->GetCount() - 1);
