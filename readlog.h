@@ -85,7 +85,7 @@ void read_data_from_txt(vector<LogMsg>& L_log)
 			tk_ch >> tmp_ch;
 
 			//Creazione di un array di elementi della classe Log
-			LogMsg tmp_log(tmp_timestamp, tmp_datas, tmp_id, tmp_ch, str_name);
+			LogMsg tmp_log(tmp_timestamp, tmp_datas, tmp_id, tmp_ch);
 			L_log.push_back(tmp_log);
 
 		}
