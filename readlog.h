@@ -6,8 +6,14 @@
 #include <string>
 #include "log.h"
 
-#define BASE_VISUAL_LIMIT 300		//lmite di dati visualizzabili in una volta nel grafico
 using namespace std;
+
+#define BASE_VISUAL_LIMIT 300		//lmite di dati visualizzabili in una volta nel grafico
+const string blf_name_file = "TXT\\blf_name.txt";
+const string dbc_name_file = "TXT\\dbc_names.txt";
+const string id_name_file = "TXT\\id_names.txt";
+const string log_data_file = "TXT\\log_datas.txt";
+const string open_info_file = "TXT\\open_info.txt";
 
 // funzione che trasmorma un oggetto LogMsg in una stringa in formato csv
 string log_to_string(LogMsg in_log_msg) {
@@ -18,7 +24,7 @@ string log_to_string(LogMsg in_log_msg) {
 
 //funzione per eseguire script python per leggere i dati da file blf
 void run_python_file(string& file_name) {
-	ifstream open_file("TXT\\open_info.txt");
+	ifstream open_file(open_info_file);
 	string command;
 
 	open_file >> command;
@@ -59,7 +65,7 @@ void read_data_from_txt(vector<LogMsg>& L_log)
 	run_python_file(filename);
 
 	//Lettura file txt con dati del file blf
-	ifstream log_file("TXT\\log_datas.txt");
+	ifstream log_file(log_data_file);
 	if (log_file.is_open()) {
 		string str_timestamp, str_datas, str_id, str_channel, str_name;
 		while (getline(log_file, str_timestamp, ',')) {
@@ -94,7 +100,7 @@ void read_data_from_txt(vector<LogMsg>& L_log)
 	log_file.close();
 
 	//cancello il contenuto del file txt usato per passare i dati
-	ofstream file("TXT\\log_datas.txt", ios::trunc);
+	ofstream file(log_data_file, ios::trunc);
 
 }
 
@@ -156,7 +162,7 @@ bool write_csv_file(LogSignal to_export_logs) {
 // funzione per scrivere il path della dbc inserita dal textbox nel file dbc_names.txt
 void write_dbc_path(wxTextCtrl* dbc_name) {
 	ofstream dbc_names_file;
-	dbc_names_file.open("TXT\\dbc_names.txt", ios_base::app);
+	dbc_names_file.open(dbc_name_file, ios_base::app);
 
 	wxString tmp_dbc_path = dbc_name->GetValue();
 
@@ -166,7 +172,7 @@ void write_dbc_path(wxTextCtrl* dbc_name) {
 
 // funzione per cancellare il path di una dbc dal file dbc_names.txt
 void delete_dbc_path(wxString dbc_name) {
-	ifstream dbc_names_file("TXT\\dbc_names.txt");
+	ifstream dbc_names_file(dbc_name_file);
 	string tmp_dbc;
 	vector<string> tmp_dbc_list;
 
@@ -177,7 +183,7 @@ void delete_dbc_path(wxString dbc_name) {
 	}
 	dbc_names_file.close();
 
-	ofstream dbc_names_out_file("TXT\\dbc_names.txt");					//riscrivo il file con i path rimanenti
+	ofstream dbc_names_out_file(dbc_name_file);					//riscrivo il file con i path rimanenti
 
 	for (int i = 0; i < tmp_dbc_list.size(); i++) {
 		dbc_names_out_file << tmp_dbc_list[i] << endl;
@@ -186,7 +192,7 @@ void delete_dbc_path(wxString dbc_name) {
 
 // funzione per scrivere nel listbox delle dbc il nome di ciascuna dbc presente nel file dbc_names.txt
 void write_dbc_list(wxListBox* dbc_list) {
-	ifstream dbc_names_file("TXT\\dbc_names.txt");
+	ifstream dbc_names_file(dbc_name_file);
 	string str_path;
 
 	while (dbc_names_file >> str_path) {
@@ -201,7 +207,7 @@ void write_dbc_list(wxListBox* dbc_list) {
 
 // funzione per assegnare il nome a un messaggio di log corrispondente al suo id
 void assign_name_to_id(vector<LogSignal>& log_signals) {
-	ifstream id_names_file("TXT\\id_names.txt");
+	ifstream id_names_file(id_name_file);
 	string str_id, str_name;
 
 	while (getline(id_names_file, str_id, ',')) {
@@ -217,6 +223,5 @@ void assign_name_to_id(vector<LogSignal>& log_signals) {
 		}
 	}
 
-	id_names_file.clear();
 	id_names_file.close();
 }
