@@ -61,21 +61,22 @@ def main():
         for db_path in dbc_paths:
             db = cantools.database.load_file(db_path)
             for msg_tuple in messages:
-                if msg_tuple[2] != "":
+                id ,data ,name = msg_tuple
+                if name != "":
                     continue
                 
                 tmp_name = ""
                 try:
-                    message = db.get_message_by_frame_id(msg_tuple[0])
-                    decoded_signals = message.decode(msg_tuple[1])
+                    message = db.get_message_by_frame_id(id)
+                    decoded_signals = message.decode(data)
                     # Iterate over signal names and values
                     for signal_name, signal_value in decoded_signals.items():
                         tmp_name = signal_name                   
                 except:
                     continue
 
-                msg_tuple = msg_tuple[0],msg_tuple[1],tmp_name
-                id_names_file.write(f"{msg_tuple[0]},{tmp_name}")
+                msg_tuple = id , data, tmp_name
+                id_names_file.write(f"{id},{tmp_name}")
                 id_names_file.write("\n")
 
         id_names_file.close()
