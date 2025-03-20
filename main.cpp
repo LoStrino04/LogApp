@@ -249,7 +249,7 @@ void AppFrame::OnOpen(wxCommandEvent& event) {
         return;
     }
 
-    ofstream blf_name(blf_name_file);
+    ofstream blf_name(BLF_NAME_FILE);
     blf_name.clear();
     blf_name << text_log->GetValue();
     blf_name.close();
@@ -276,13 +276,13 @@ void AppFrame::OnCloseBLF(wxCommandEvent& event) {
     first_plot->DelAllLayers(true);
     second_plot->DelAllLayers(true);
     IdList->Clear();
-    ofstream id_names_file(id_name_file);
+    ofstream id_names_file(ID_NAME_FILE);
     id_names_file.clear();
     id_names_file.close();
 }
 
 void AppFrame::OnClose(wxCommandEvent& event) {
-    ofstream id_names_file(id_name_file);
+    ofstream id_names_file(ID_NAME_FILE);
     id_names_file.clear();
     id_names_file.close();
     Destroy();
