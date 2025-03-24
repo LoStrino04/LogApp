@@ -12,8 +12,10 @@ Setup: L'applicazione usa uno script python per estrarre i dati dal blf, quindi 
        In caso il caricameto del BLF vi risulti completato ma non vedete nessun segnale nella lista degli ID cliccando su uno dei due canali, inserite nel file open_info.txt
        il comando che usa la vostra versione di python per eseguire i file (per esempio py o python)
 
-Caricamento BLF: Copiare il percorso assoluto del file blf nella casella di testo corrispondente, scrivendolo con nel seguente formato
+Caricamento BLF: Copiare il percorso assoluto del file blf nella casella di testo corrispondente, scrivendolo con nei seguenti formato
                  C:\\Users\\Nome\\BLF\\nome.blf
+                 C:\Users\Nome\BLF\nome.blf
+                 C:/Users/Nome/BLF/nome.blf
                  Può anche essere copiata solo la parte BLF\\nome.blf, solo se il file viene copiato nella cartella BLF contenuta nella cartella dell'applicazione
                  Premere Load Log e aspettare e compaia il popup che conferma il completamento del caricamento
                  
